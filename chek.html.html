@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестовый вопрос</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f7f9fc;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .interactive {
+            width: 100%;
+            max-width: 650px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Карточка вопроса */
+        .quiz {
+            width: 100%;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eef0f3;
+            padding: 32px;
+            transition: all 0.3s ease;
+        }
+
+        /* Вопрос */
+        .quiz__question {
+            font-size: 18px;
+            line-height: 1.5;
+            color: #1a1a1a;
+            font-weight: 600;
+            margin-bottom: 24px;
+            letter-spacing: -0.01em;
+        }
+
+        /* Список вариантов */
+        .quiz__options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .quiz__option {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 10px;
+            border: 2px solid #eef0f3;
+            background: #fafbfc;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #2d3748;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .quiz__option:hover:not(:disabled) {
+            background: #f0f4f9;
+            border-color: #a0aec0;
+        }
+
+        .quiz__option:disabled {
+            cursor: default;
+        }
+
+        /* Индикатор-кружок слева */
+        .quiz__marker {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .quiz__marker svg {
+            width: 12px;
+            height: 12px;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.2s ease;
+        }
+
+        /* Правильный ответ */
+        .quiz__option.correct {
+            background: #f0f9f4;
+            border-color: #1a7a4a;
+            color: #1a7a4a;
+        }
+
+        .quiz__option.correct .quiz__marker {
+            background: #1a7a4a;
+            border-color: #1a7a4a;
+        }
+
+        .quiz__option.correct .quiz__marker svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Неправильный ответ */
+        .quiz__option.wrong {
+            background: #fdf0f0;
+            border-color: #c53030;
+            color: #c53030;
+        }
+
+        .quiz__option.wrong .quiz__marker {
+            background: #c53030;
+            border-color: #c53030;
+        }
+
+        .quiz__option.wrong .quiz__marker svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Затухание невыбранных вариантов */
+        .quiz__option.dimmed {
+            opacity: 0.45;
+        }
+
+        /* Блок с ответом */
+        .quiz__answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0.2, 0.2, 1), margin-top 0.4s ease;
+            margin-top: 0;
+        }
+
+        .quiz__answer.visible {
+            max-height: 600px;
+            margin-top: 24px;
+        }
+
+        .quiz__answer-inner {
+            background: #f0f9f4;
+            border: 1px solid #b8e0c8;
+            border-radius: 12px;
+            padding: 20px 24px;
+        }
+
+        .quiz__answer-label {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: #1a7a4a;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        .quiz__answer-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #1a7a4a;
+        }
+
+        /* Кнопка сброса */
+        .quiz__reset {
+            width: 100%;
+            padding: 14px 24px;
+            border-radius: 12px;
+            border: 2px solid #cbd5e0;
+            background: #ffffff;
+            color: #4a5568;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-family: inherit;
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+        }
+
+        .quiz__reset.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .quiz__reset:hover {
+            background: #f0f4f9;
+            border-color: #a0aec0;
+        }
+
+        /* Адаптив */
+        @media (max-width: 480px) {
+            .quiz {
+                padding: 20px;
+            }
+            .quiz__question {
+                font-size: 16px;
+            }
+            .quiz__option {
+                font-size: 14px;
+                padding: 14px 16px;
+            }
+            .quiz__answer-inner {
+                padding: 16px 18px;
+            }
+            .quiz__answer-text {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="interactive">
+        <div class="quiz" id="quiz">
+            <div class="quiz__question">Как часто надо оценивать результаты проекта?</div>
+            <div class="quiz__options" id="options"></div>
+
+            <div class="quiz__answer" id="answer">
+                <div class="quiz__answer-inner">
+                    <span class="quiz__answer-label">Ответ</span>
+                    <p class="quiz__answer-text">Оценивать результаты проекта надо в течение года, а не только после итогового мероприятия. Контроль нужен, чтобы увидеть, как проект влияет на детей, педагогов и родителей: стали ли дети активнее участвовать в общих делах, умеют ли воспитатели планировать работу по трекам, понимают ли семьи смысл проекта.</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="quiz__reset" id="reset">Пройти ещё раз</button>
+    </div>
+
+    <script>
+        const optionsData = [
+            { text: "После итогового мероприятия", correct: false },
+            { text: "По требованиям руководства", correct: false },
+            { text: "Несколько раз в течение года", correct: true }
+        ];
+
+        const optionsEl = document.getElementById('options');
+        const answerEl = document.getElementById('answer');
+        const resetBtn = document.getElementById('reset');
+        const quizEl = document.getElementById('quiz');
+
+        let answered = false;
+
+        // Иконки
+        const checkIcon = `
+            <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 6L5 9L10 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+
+        const crossIcon = `
+            <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3L9 9M9 3L3 9" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        `;
+
+        // Создаём кнопки
+        optionsData.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'quiz__option';
+            btn.dataset.index = index;
+
+            btn.innerHTML = `
+                <span class="quiz__marker">${opt.correct ? checkIcon : crossIcon}</span>
+                <span>${opt.text}</span>
+            `;
+
+            btn.addEventListener('click', () => handleAnswer(index, btn));
+            optionsEl.appendChild(btn);
+        });
+
+        const allOptions = document.querySelectorAll('.quiz__option');
+
+        function handleAnswer(selectedIndex, selectedBtn) {
+            if (answered) return;
+            answered = true;
+
+            const isCorrect = optionsData[selectedIndex].correct;
+
+            // Подсвечиваем выбранный вариант
+            if (isCorrect) {
+                selectedBtn.classList.add('correct');
+            } else {
+                selectedBtn.classList.add('wrong');
+            }
+
+            // Показываем правильный ответ, если выбрали неверно
+            allOptions.forEach((btn, i) => {
+                btn.disabled = true;
+                if (optionsData[i].correct) {
+                    btn.classList.add('correct');
+                }
+                if (i !== selectedIndex && !optionsData[i].correct) {
+                    btn.classList.add('dimmed');
+                }
+                if (i === selectedIndex && !optionsData[i].correct) {
+                    // выбранный неправильный — уже с классом wrong
+                }
+            });
+
+            // Показываем блок с ответом
+            setTimeout(() => {
+                answerEl.classList.add('visible');
+                resetBtn.classList.add('visible');
+                // Пересчитываем высоту для корректной анимации (если нужно)
+            }, 300);
+        }
+
+        // Сброс
+        resetBtn.addEventListener('click', () => {
+            answered = false;
+            answerEl.classList.remove('visible');
+            resetBtn.classList.remove('visible');
+
+            allOptions.forEach((btn, i) => {
+                btn.classList.remove('correct', 'wrong', 'dimmed');
+                btn.disabled = false;
+            });
+        });
+    </script>
+
+</body>
+</html>
