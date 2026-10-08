@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<script type="text/javascript" src="iframeResizer.contentWindow.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Интерактив: декларация на пищевую продукцию</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f4f6f8;
+    margin: 0;
+    padding: 16px 12px 40px;
+    color: #1f2937;
+  }
+  .board {
+    max-width: 650px;
+    margin: 0 auto;
+  }
+  .columns {
+    display: flex;
+    gap: 10px;
+  }
+  .column {
+    flex: 1;
+    background: #ffffff;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 8px;
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .column.over {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+  .column h2 {
+    font-size: 13px;
+    text-align: center;
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
+  }
+  .column[data-col="before"] h2 { color: #b45309; }
+  .column[data-col="after"] h2 { color: #047857; }
+
+  .slot {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .card {
+    background: #ffffff;
+    border: 2px solid #94a3b8;
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 12px;
+    line-height: 1.35;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 0.15s, border-color 0.2s, background 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .card:active {
+    cursor: grabbing;
+  }
+  .card.dragging {
+    opacity: 0.5;
+  }
+  .card.correct {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #14532d;
+  }
+  .card.wrong {
+    background: #fee2e2;
+    border-color: #dc2626;
+    color: #7f1d1d;
+  }
+
+  .pool {
+    margin-top: 12px;
+    background: #ffffff;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 8px;
+    min-height: 60px;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .pool.over {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+  .pool-title {
+    font-size: 11px;
+    color: #64748b;
+    margin: 0 0 6px;
+    text-align: center;
+  }
+  .pool .slot {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pool .card {
+    flex: 1 1 100%;
+  }
+
+  .buttons {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    width: 100%;
+    max-width: 260px;
+  }
+  button:active {
+    transform: scale(0.98);
+  }
+  #checkBtn {
+    background: #2563eb;
+    color: #fff;
+  }
+  #checkBtn:hover {
+    background: #1d4ed8;
+  }
+  #commentBtn {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+  #commentBtn:hover {
+    background: #cbd5e1;
+  }
+  #resetBtn {
+    background: transparent;
+    color: #64748b;
+    font-weight: 500;
+    padding: 4px;
+    font-size: 12px;
+  }
+  #resetBtn:hover {
+    color: #1e293b;
+    text-decoration: underline;
+  }
+
+  .comment {
+    max-width: 650px;
+    margin: 12px auto 0;
+    background: #ffffff;
+    border-left: 3px solid #2563eb;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #334155;
+    display: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .comment.show {
+    display: block;
+    animation: fadeIn 0.25s ease;
+  }
+  .comment p {
+    margin: 0 0 8px;
+  }
+  .comment p:last-child {
+    margin-bottom: 0;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 480px) {
+    .columns { flex-direction: column; }
+    .column { min-height: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="board">
+  <div class="columns">
+    <div class="column" data-col="before">
+      <h2>Как было</h2>
+      <div class="slot" id="slot-before"></div>
+    </div>
+    <div class="column" data-col="after">
+      <h2>Как стало</h2>
+      <div class="slot" id="slot-after"></div>
+    </div>
+  </div>
+
+  <div class="pool" id="pool">
+    <p class="pool-title">Перетащите карточки в нужную колонку</p>
+    <div class="slot" id="slot-pool"></div>
+  </div>
+
+  <div class="buttons">
+    <button id="checkBtn">Проверить</button>
+    <button id="commentBtn">Комментарий к ответу</button>
+    <button id="resetBtn">Сбросить</button>
+  </div>
+
+  <div class="comment" id="comment">
+    <p><strong>Комментарий к ответу</strong></p>
+    <p>Законодатель исключил пункт, который позволял предприятию питания не представлять декларацию на пищевую продукцию, которую реализуют по заказам – через доставку, навынос, кейтеринг (п. 1 Изменений, утв. постановлением главного санитарного врача от 22.08.2024 № 9). Этот пункт считали спорным. Предприятия полагали, что декларация не нужна вовсе, а контролирующие органы – что просто не надо представлять бумажную декларацию, ведь сведения о ней есть на сайте Росаккредитации.</p>
+    <p>Теперь действует единое правило – декларация нужна на пищевую продукцию, если её реализуют вне предприятия общепита без оказания услуг общественного питания (п. 7 СанПиН 2.3/2.4.4282-26). Например, когда предприятие изготовило продукцию, доставило её в раздаточный цех, а тот реализовал продукцию, но столы, чтобы её могли употребить сразу после приобретения, не поставил (п. 4.1, 4.5 ГОСТ 31984-2012, п. 8.1 ГОСТ 30390-2013). При этом правила не предполагают альтернативы – то есть декларация нужна, даже если выполнили хотя бы один пункт. Например, организация приобрела продукцию и реализовала её в собственной столовой или, наоборот, изготовила продукцию, но реализовала её навынос. На привозную продукцию декларацию следует запрашивать у поставщика, на собственную – оформлять самостоятельно.</p>
+    <p>Декларация по-прежнему не нужна, если предприятие общепита изготавливает пищевую продукцию на пищеблоке, а реализует тут же в обеденном зале. То есть пищеблоку ОО декларация не нужна. Соответствие такой продукции требованиям техрегламентов проверят при госконтроле (ч. 1 и 3 ст. 21 ТР ТС 021/2011).</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  const cardsData = [
+    {
+      id: 'card1',
+      text: 'Не нужно представлять декларацию на пищевую продукцию, которую реализуют через доставку, навынос и кейтеринг',
+      correct: 'before'
+    },
+    {
+      id: 'card2',
+      text: 'Всю пищевую продукцию, которую реализовали, но будут есть вне столовой, нужно декларировать',
+      correct: 'after'
+    }
+  ];
+
+  const slotPool = document.getElementById('slot-pool');
+  const slotBefore = document.getElementById('slot-before');
+  const slotAfter = document.getElementById('slot-after');
+  const pool = document.getElementById('pool');
+  const checkBtn = document.getElementById('checkBtn');
+  const commentBtn = document.getElementById('commentBtn');
+  const comment = document.getElementById('comment');
+  const resetBtn = document.getElementById('resetBtn');
+
+  let dragged = null;
+
+  function createCard(data) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.draggable = true;
+    el.dataset.id = data.id;
+    el.dataset.correct = data.correct;
+    el.textContent = data.text;
+
+    el.addEventListener('dragstart', (e) => {
+      dragged = el;
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', data.id);
+    });
+
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      dragged = null;
+    });
+
+    return el;
+  }
+
+  function init() {
+    slotPool.innerHTML = '';
+    slotBefore.innerHTML = '';
+    slotAfter.innerHTML = '';
+    cardsData.forEach(data => {
+      slotPool.appendChild(createCard(data));
+    });
+    clearMarks();
+    comment.classList.remove('show');
+  }
+
+  function clearMarks() {
+    document.querySelectorAll('.card').forEach(c => {
+      c.classList.remove('correct', 'wrong');
+    });
+  }
+
+  document.querySelectorAll('.column').forEach(col => {
+    col.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      col.classList.add('over');
+    });
+    col.addEventListener('dragleave', (e) => {
+      if (!col.contains(e.relatedTarget)) {
+        col.classList.remove('over');
+      }
+    });
+    col.addEventListener('drop', (e) => {
+      e.preventDefault();
+      col.classList.remove('over');
+      if (!dragged) return;
+      col.querySelector('.slot').appendChild(dragged);
+      clearMarks();
+    });
+  });
+
+  pool.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    pool.classList.add('over');
+  });
+  pool.addEventListener('dragleave', (e) => {
+    if (!pool.contains(e.relatedTarget)) {
+      pool.classList.remove('over');
+    }
+  });
+  pool.addEventListener('drop', (e) => {
+    e.preventDefault();
+    pool.classList.remove('over');
+    if (!dragged) return;
+    slotPool.appendChild(dragged);
+    clearMarks();
+  });
+
+  checkBtn.addEventListener('click', () => {
+    clearMarks();
+    let allPlaced = true;
+
+    document.querySelectorAll('.card').forEach(card => {
+      const parentCol = card.closest('.column');
+      if (!parentCol) {
+        allPlaced = false;
+        return;
+      }
+      const colName = parentCol.dataset.col;
+      if (colName === card.dataset.correct) {
+        card.classList.add('correct');
+      } else {
+        card.classList.add('wrong');
+      }
+    });
+
+    if (!allPlaced) {
+      pool.style.borderColor = '#f59e0b';
+      setTimeout(() => { pool.style.borderColor = ''; }, 800);
+    }
+  });
+
+  commentBtn.addEventListener('click', () => {
+    comment.classList.toggle('show');
+    if (comment.classList.contains('show')) {
+      comment.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
+  resetBtn.addEventListener('click', init);
+
+  init();
+})();
+</script>
+</body>
+</html>
